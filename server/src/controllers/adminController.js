@@ -1,7 +1,7 @@
 const ParkingZone = require("../models/ParkingZone");
 const ParkingSlot = require("../models/ParkingSlot");
 const Reservation = require("../models/Reservation");
-
+const { refreshExpiredReservations } = require("./parkingController");
 
 const createZone = async (req, res) => {
   try {
@@ -47,14 +47,10 @@ const createSlot = async (req, res) => {
 };
 
 const getStatistics = async (req, res) => {
-  try {
-    const [
-      totalZones,
-      totalSlots,
-      availableSlots,
-      activeReservations,
-      totalReservations,
-    ] = await Promise.all([
+  await refreshExpiredReservations();
+
+  const [totalZones, totalSlots, availableSlots, activeReservations, totalReservations] =
+    await Promise.all([
       ParkingZone.countDocuments(),
       ParkingSlot.countDocuments(),
       ParkingSlot.countDocuments({ isAvailable: true }),
@@ -62,75 +58,65 @@ const getStatistics = async (req, res) => {
       Reservation.countDocuments(),
     ]);
 
-    const zoneUsage = await Reservation.aggregate([
-      {
-        $group: {
-          _id: "$zone",
-          reservations: { $sum: 1 },
-        },
+  const zoneUsage = await Reservation.aggregate([
+    {
+      $group: {
+        _id: "$zone",
+        reservations: { $sum: 1 },
       },
-      {
-        $lookup: {
-          from: "parkingzones",
-          localField: "_id",
-          foreignField: "_id",
-          as: "zone",
-        },
+    },
+    {
+      $lookup: {
+        from: "parkingzones",
+        localField: "_id",
+        foreignField: "_id",
+        as: "zone",
       },
-      {
-        $project: {
-          _id: 0,
-          zoneName: { $arrayElemAt: ["$zone.name", 0] },
-          reservations: 1,
-        },
+    },
+    {
+      $project: {
+        _id: 0,
+        zoneName: { $arrayElemAt: ["$zone.name", 0] },
+        reservations: 1,
       },
-    ]);
+    },
+  ]);
 
-    res.json({
-      statistics: {
-        totalZones,
-        totalSlots,
-        availableSlots,
-        occupiedSlots: totalSlots - availableSlots,
-        activeReservations,
-        totalReservations,
-      },
-      zoneUsage,
-    });
-  } catch (error) {
-    console.error("Get statistics error:", error);
-    res.status(500).json({ message: error.message });
-  }
+  res.json({
+    statistics: {
+      totalZones,
+      totalSlots,
+      availableSlots,
+      occupiedSlots: totalSlots - availableSlots,
+      activeReservations,
+      totalReservations,
+    },
+    zoneUsage,
+  });
 };
 
 const getReports = async (req, res) => {
-  try {
-    const reservations = await Reservation.find()
-      .populate("user", "name email")
-      .populate("slot", "slotNumber")
-      .populate("zone", "name")
-      .sort({ createdAt: -1 });
+  await refreshExpiredReservations();
 
-    const reports = reservations.map((reservation) => ({
-      user: reservation.user?.name || "Unknown",
-      email: reservation.user?.email || "Unknown",
-      zone: reservation.zone?.name || "Unknown",
-      slot: reservation.slot?.slotNumber || "Unknown",
-      permitCode: reservation.permitCode,
-      vehicleNumber: reservation.vehicleNumber,
-      status: reservation.status,
-      startsAt: reservation.startsAt,
-      expiresAt: reservation.expiresAt,
-    }));
+  const reservations = await Reservation.find()
+    .populate("user", "name email")
+    .populate("slot", "slotNumber")
+    .populate("zone", "name")
+    .sort({ createdAt: -1 });
 
-    res.json({
-      generatedAt: new Date(),
-      reports,
-    });
-  } catch (error) {
-    console.error("Get reports error:", error);
-    res.status(500).json({ message: error.message });
-  }
+  const reportRows = reservations.map((reservation) => ({
+    user: reservation.user?.name || "Unknown",
+    email: reservation.user?.email || "Unknown",
+    zone: reservation.zone?.name || "Unknown",
+    slot: reservation.slot?.slotNumber || "Unknown",
+    permitCode: reservation.permitCode,
+    vehicleNumber: reservation.vehicleNumber,
+    status: reservation.status,
+    startsAt: reservation.startsAt,
+    expiresAt: reservation.expiresAt,
+  }));
+
+  res.json({ generatedAt: new Date(), reportRows });
 };
 
 module.exports = {

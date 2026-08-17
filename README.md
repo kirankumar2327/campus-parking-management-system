@@ -96,7 +96,7 @@ CampusParking_system/
    copy .env.example .env
    ```
 
-3. Make sure MongoDB is running locally, or replace `MONGODB_URI` in `.env` with your MongoDB connection string.
+
 
 4. Add SMTP settings in `.env` so email alerts can be delivered.
 
@@ -112,13 +112,10 @@ CampusParking_system/
    npm run dev
    ```
 
-7. Open the application:
 
-   [http://localhost:5000](http://localhost:5000)
 
 ## Production Deployment
 
-This project is ready to deploy on Render or similar Node.js platforms.
 
 ### Render Settings
 
@@ -147,10 +144,6 @@ This project is ready to deploy on Render or similar Node.js platforms.
 
 ### Notes for Production
 
-- The server binds to `0.0.0.0` and uses `process.env.PORT`.
-- `SECRET_KEY` is the preferred JWT secret in production. `JWT_SECRET` is still supported as a fallback for compatibility.
-- Static frontend assets are served directly by Express from `public/`.
-- `render.yaml` is included for Render deployment.
 - `.gitignore` is included so local secrets and dependencies are not pushed to GitHub.
 
 ## Demo Credentials

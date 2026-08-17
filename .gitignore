@@ -11,3 +11,5 @@ build/
 tmp/
 outputs/
 *.pptx
+server-err.log
+server-out.log

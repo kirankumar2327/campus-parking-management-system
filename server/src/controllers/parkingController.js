@@ -30,13 +30,16 @@ const getDurationMinutes = (durationHours, durationMinutes) => {
 };
 
 const getSlots = async (req, res) => {
-  await refreshExpiredReservations();
+  try {
+    const slots = await ParkingSlot.find()
+      .populate("zone", "name location")
+      .sort({ createdAt: 1 });
 
-  const slots = await ParkingSlot.find()
-    .populate("zone", "name location")
-    .sort({ createdAt: 1 });
-
-  res.json({ slots });
+    res.json({ slots });
+  } catch (error) {
+    console.error("Get slots error:", error);
+    res.status(500).json({ message: error.message });
+  }
 };
 
 const getZones = async (req, res) => {
@@ -46,7 +49,7 @@ const getZones = async (req, res) => {
 
 const reserveSlot = async (req, res) => {
   try {
-    await refreshExpiredReservations();
+    
 
     const { slotId, vehicleNumber, durationHours, durationMinutes } = req.body;
     const slot = await ParkingSlot.findById(slotId).populate("zone");
@@ -91,45 +94,52 @@ const reserveSlot = async (req, res) => {
 };
 
 const getMyReservations = async (req, res) => {
-  await refreshExpiredReservations();
+  try {
+    const reservations = await Reservation.find({ user: req.user._id })
+      .populate("slot", "slotNumber vehicleType")
+      .populate("zone", "name location")
+      .sort({ createdAt: -1 });
 
-  const reservations = await Reservation.find({ user: req.user._id })
-    .populate("slot", "slotNumber vehicleType")
-    .populate("zone", "name location")
-    .sort({ createdAt: -1 });
+    const now = new Date();
 
-  const now = new Date();
-  const notifications = reservations
-    .filter(
-      (reservation) =>
-        reservation.status === "active" &&
-        reservation.expiresAt.getTime() - now.getTime() <= 30 * 60 * 1000
-    )
-    .map((reservation) => ({
-      reservationId: reservation._id,
-      message: `Reservation ${reservation.permitCode} expires soon`,
-      expiresAt: reservation.expiresAt,
-    }));
+    const notifications = reservations
+      .filter(
+        (reservation) =>
+          reservation.status === "active" &&
+          reservation.expiresAt.getTime() - now.getTime() <= 30 * 60 * 1000
+      )
+      .map((reservation) => ({
+        reservationId: reservation._id,
+        message: `Reservation ${reservation.permitCode} expires soon`,
+        expiresAt: reservation.expiresAt,
+      }));
 
-  res.json({ reservations, notifications });
+    res.json({ reservations, notifications });
+  } catch (error) {
+    console.error("Get reservations error:", error);
+    res.status(500).json({ message: error.message });
+  }
 };
 
 const getActiveReservations = async (req, res) => {
-  await refreshExpiredReservations();
+  try {
+    const reservations = await Reservation.find({ status: "active" })
+      .populate("user", "name email vehicleNumber")
+      .populate("slot", "slotNumber vehicleType")
+      .populate("zone", "name location")
+      .sort({ expiresAt: 1 });
 
-  const reservations = await Reservation.find({ status: "active" })
-    .populate("user", "name email vehicleNumber")
-    .populate("slot", "slotNumber vehicleType")
-    .populate("zone", "name location")
-    .sort({ expiresAt: 1 });
-
-  res.json({ reservations });
+    res.json({ reservations });
+  } catch (error) {
+    console.error("Get active reservations error:", error);
+    res.status(500).json({ message: error.message });
+  }
 };
 
 const verifyPermit = async (req, res) => {
   try {
     const { permitCode } = req.body;
-    await refreshExpiredReservations();
+    
 
     const reservation = await Reservation.findOne({ permitCode })
       .populate("user", "name email vehicleNumber")

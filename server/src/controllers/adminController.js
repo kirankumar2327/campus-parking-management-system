@@ -2,70 +2,47 @@ const ParkingZone = require("../models/ParkingZone");
 const ParkingSlot = require("../models/ParkingSlot");
 const Reservation = require("../models/Reservation");
 
+
 const createZone = async (req, res) => {
   try {
     const zone = await ParkingZone.create(req.body);
-    res.status(201).json({
-      message: "Parking zone created",
-      zone,
-    });
+    res.status(201).json({ message: "Parking zone created", zone });
   } catch (error) {
-    res.status(400).json({
-      message: error.message,
-    });
+    res.status(400).json({ message: error.message });
   }
 };
 
 const getAdminZones = async (req, res) => {
-  try {
-    const zones = await ParkingZone.find().sort({ createdAt: 1 });
-    res.json({ zones });
-  } catch (error) {
-    console.error("Get admin zones error:", error);
-    res.status(500).json({ message: error.message });
-  }
+  const zones = await ParkingZone.find().sort({ createdAt: 1 });
+  res.json({ zones });
 };
 
 const updateZone = async (req, res) => {
   try {
-    const zone = await ParkingZone.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
+    const zone = await ParkingZone.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
 
     if (!zone) {
-      return res.status(404).json({
-        message: "Parking zone not found",
-      });
+      return res.status(404).json({ message: "Parking zone not found" });
     }
 
-    res.json({
-      message: "Parking zone updated",
-      zone,
-    });
+    res.json({ message: "Parking zone updated", zone });
   } catch (error) {
-    res.status(400).json({
-      message: error.message,
-    });
+    res.status(400).json({ message: error.message });
   }
 };
 
 const createSlot = async (req, res) => {
   try {
     const slot = await ParkingSlot.create(req.body);
-
-    const populatedSlot = await ParkingSlot.findById(slot._id)
-      .populate("zone", "name location");
-
-    res.status(201).json({
-      message: "Parking slot created",
-      slot: populatedSlot,
-    });
+    const populatedSlot = await ParkingSlot.findById(slot._id).populate(
+      "zone",
+      "name location"
+    );
+    res.status(201).json({ message: "Parking slot created", slot: populatedSlot });
   } catch (error) {
-    res.status(400).json({
-      message: error.message,
-    });
+    res.status(400).json({ message: error.message });
   }
 };
 
@@ -122,9 +99,7 @@ const getStatistics = async (req, res) => {
     });
   } catch (error) {
     console.error("Get statistics error:", error);
-    res.status(500).json({
-      message: error.message,
-    });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -154,9 +129,7 @@ const getReports = async (req, res) => {
     });
   } catch (error) {
     console.error("Get reports error:", error);
-    res.status(500).json({
-      message: error.message,
-    });
+    res.status(500).json({ message: error.message });
   }
 };
 

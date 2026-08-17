@@ -1,0 +1,59 @@
+const User = require("../models/User");
+const { generateToken } = require("../utils/jwt");
+
+const buildAuthResponse = (user) => ({
+  token: generateToken(user),
+  user: {
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    vehicleNumber: user.vehicleNumber,
+    department: user.department,
+  },
+});
+
+const register = async (req, res) => {
+  try {
+    const { name, email, password, vehicleNumber, department } = req.body;
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email is already registered" });
+    }
+
+    const user = await User.create({
+      name,
+      email,
+      password,
+      role: "user",
+      vehicleNumber,
+      department,
+    });
+
+    res.status(201).json(buildAuthResponse(user));
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user || !(await user.comparePassword(password))) {
+      return res.status(400).json({ message: "Invalid email or password" });
+    }
+
+    res.json(buildAuthResponse(user));
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getProfile = async (req, res) => {
+  res.json({ user: req.user });
+};
+
+module.exports = { register, login, getProfile };
